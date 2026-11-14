@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coin Hunter</title>
+<title>COIN HUNTER</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -24,21 +24,62 @@ body {
 
 h1 {
     color: gold;
+    margin: 12px;
 }
 
 #score {
-    font-size: 23px;
-    margin: 15px;
     color: #42d392;
+    font-size: 23px;
+    font-weight: bold;
+    margin: 15px;
 }
 
-canvas {
+#game {
+    position: relative;
+    width: min(95vw, 400px);
+    height: 500px;
+    margin: auto;
     background: #193c31;
     border: 3px solid #42d392;
     border-radius: 12px;
-    width: min(95vw, 400px);
-    height: auto;
-    touch-action: none;
+    overflow: hidden;
+}
+
+#player {
+    position: absolute;
+    width: 40px;
+    height: 65px;
+    left: 180px;
+    top: 220px;
+    z-index: 2;
+    font-size: 48px;
+    line-height: 65px;
+    user-select: none;
+}
+
+#coin {
+    position: absolute;
+    width: 35px;
+    height: 35px;
+    left: 100px;
+    top: 100px;
+    font-size: 32px;
+    line-height: 35px;
+    animation: spin 1s infinite alternate;
+    user-select: none;
+}
+
+@keyframes spin {
+    from {
+        transform: scaleX(0.5);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
+.controls {
+    margin-top: 12px;
 }
 
 button {
@@ -47,16 +88,22 @@ button {
     border: none;
     border-radius: 12px;
     padding: 15px 25px;
-    font-size: 20px;
-    margin: 8px;
+    font-size: 22px;
+    margin: 5px;
     cursor: pointer;
+}
+
+button:active {
+    transform: scale(0.93);
 }
 
 #finish {
     background: #20a66a;
     width: min(95%, 400px);
+    margin-top: 18px;
     font-weight: bold;
 }
+
 </style>
 </head>
 
@@ -64,15 +111,23 @@ button {
 
 <h1>🪙 COIN HUNTER</h1>
 
-<div id="score">Монеты: 0 | Баллы: 0</div>
+<div id="score">
+    Монеты: 0 | Баллы: 0
+</div>
 
-<canvas id="game" width="400" height="500"></canvas>
+<div id="game">
 
-<div>
+    <div id="coin">🪙</div>
+
+    <div id="player">🧍</div>
+
+</div>
+
+<div class="controls">
     <button onclick="move('up')">⬆️</button>
 </div>
 
-<div>
+<div class="controls">
     <button onclick="move('left')">⬅️</button>
     <button onclick="move('down')">⬇️</button>
     <button onclick="move('right')">➡️</button>
@@ -83,17 +138,20 @@ button {
 </button>
 
 <script>
+
 const tg = window.Telegram.WebApp;
 
 tg.ready();
 tg.expand();
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const game = document.getElementById("game");
+const playerElement = document.getElementById("player");
+const coinElement = document.getElementById("coin");
+const scoreElement = document.getElementById("score");
 
 let player = {
-    x: 190,
-    y: 240
+    x: 180,
+    y: 220
 };
 
 let coin = {
@@ -103,98 +161,33 @@ let coin = {
 
 let score = 0;
 let gameFinished = false;
-let animation = 0;
 
-// Рисуем человечка
-function drawPlayer() {
-    ctx.save();
+// Обновление экрана
+function updateScreen() {
 
-    // Голова
-    ctx.fillStyle = "#FFD6A5";
-    ctx.beginPath();
-    ctx.arc(player.x + 10, player.y - 12, 10, 0, Math.PI * 2);
-    ctx.fill();
+    playerElement.style.left = player.x + "px";
+    playerElement.style.top = player.y + "px";
 
-    // Тело
-    ctx.fillStyle = "#2388FF";
-    ctx.fillRect(player.x, player.y, 20, 25);
+    coinElement.style.left = coin.x + "px";
+    coinElement.style.top = coin.y + "px";
 
-    // Руки
-    ctx.strokeStyle = "#FFD6A5";
-    ctx.lineWidth = 5;
-
-    ctx.beginPath();
-    ctx.moveTo(player.x, player.y + 5);
-    ctx.lineTo(player.x - 8, player.y + 17);
-
-    ctx.moveTo(player.x + 20, player.y + 5);
-    ctx.lineTo(player.x + 28, player.y + 17);
-
-    ctx.stroke();
-
-    // Ноги
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 5;
-
-    ctx.beginPath();
-    ctx.moveTo(player.x + 5, player.y + 25);
-    ctx.lineTo(player.x + 2, player.y + 37);
-
-    ctx.moveTo(player.x + 15, player.y + 25);
-    ctx.lineTo(player.x + 18, player.y + 37);
-
-    ctx.stroke();
-
-    ctx.restore();
+    scoreElement.innerText =
+        "Монеты: " + score +
+        " | Баллы: " + score;
 }
 
-// Рисуем золотую монетку
-function drawCoin() {
-    ctx.save();
+// Новое расположение монетки
+function newCoin() {
 
-    animation += 0.06;
+    coin.x = Math.floor(Math.random() * 330) + 10;
+    coin.y = Math.floor(Math.random() * 420) + 10;
 
-    let width = Math.abs(Math.cos(animation)) * 12 + 5;
-
-    ctx.fillStyle = "#FFD700";
-    ctx.beginPath();
-
-    ctx.ellipse(
-        coin.x,
-        coin.y,
-        width,
-        15,
-        0,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.fill();
-
-    ctx.strokeStyle = "#FFF1A6";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    ctx.restore();
+    updateScreen();
 }
 
-// Игровое поле
-function draw() {
-    ctx.clearRect(0, 0, 400, 500);
-
-    drawCoin();
-    drawPlayer();
-
-    document.getElementById("score").innerText =
-        "Монеты: " + score + " | Баллы: " + score;
-
-    if (!gameFinished) {
-        requestAnimationFrame(draw);
-    }
-}
-
-// Перемещение
+// Движение
 function move(direction) {
+
     if (gameFinished) return;
 
     if (direction === "up") player.y -= 25;
@@ -202,31 +195,42 @@ function move(direction) {
     if (direction === "left") player.x -= 25;
     if (direction === "right") player.x += 25;
 
-    player.x = Math.max(10, Math.min(365, player.x));
-    player.y = Math.max(30, Math.min(445, player.y));
+    player.x = Math.max(0, Math.min(350, player.x));
+    player.y = Math.max(0, Math.min(430, player.y));
 
     // Проверка сбора монетки
-    if (
-        Math.abs(player.x + 10 - coin.x) < 28 &&
-        Math.abs(player.y + 10 - coin.y) < 30
-    ) {
+    const playerCenterX = player.x + 20;
+    const playerCenterY = player.y + 32;
+
+    const coinCenterX = coin.x + 17;
+    const coinCenterY = coin.y + 17;
+
+    const distanceX = Math.abs(playerCenterX - coinCenterX);
+    const distanceY = Math.abs(playerCenterY - coinCenterY);
+
+    if (distanceX < 30 && distanceY < 35) {
+
         score++;
 
-        coin.x = Math.floor(Math.random() * 340) + 30;
-        coin.y = Math.floor(Math.random() * 420) + 30;
+        newCoin();
     }
+
+    updateScreen();
 }
 
 // Управление клавиатурой
-document.addEventListener("keydown", function(e) {
-    if (e.key === "ArrowUp") move("up");
-    if (e.key === "ArrowDown") move("down");
-    if (e.key === "ArrowLeft") move("left");
-    if (e.key === "ArrowRight") move("right");
+document.addEventListener("keydown", function(event) {
+
+    if (event.key === "ArrowUp") move("up");
+    if (event.key === "ArrowDown") move("down");
+    if (event.key === "ArrowLeft") move("left");
+    if (event.key === "ArrowRight") move("right");
+
 });
 
 // Завершение игры
 function finishGame() {
+
     if (gameFinished) return;
 
     gameFinished = true;
@@ -237,20 +241,26 @@ function finishGame() {
     };
 
     if (tg && tg.initData) {
+
         tg.sendData(JSON.stringify(result));
+
     } else {
+
         alert(
-            "Игра завершена!\n" +
+            "Игра завершена!\n\n" +
             "Монеты: " + score +
-            "\nБаллы: " + score +
-            "\nОткрой игру через Telegram."
+            "\nБаллы: " + score
         );
+
+        gameFinished = false;
     }
 }
 
-draw();
+// Первоначальное отображение
+updateScreen();
 
 </script>
 
 </body>
 </html>
+
