@@ -2,86 +2,255 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coin Hunter</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coin Hunter</title>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<style>
+* {
+    box-sizing: border-box;
+}
 
-        body {
-            margin: 0;
-            padding: 15px;
-            background: #101827;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
+body {
+    margin: 0;
+    padding: 15px;
+    background: #101827;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
 
-        h1 {
-            color: gold;
-        }
+h1 {
+    color: gold;
+}
 
-        #score {
-            font-size: 25px;
-            margin: 15px;
-            color: #42d392;
-        }
+#score {
+    font-size: 23px;
+    margin: 15px;
+    color: #42d392;
+}
 
-        canvas {
-            background: #193c31;
-            border: 3px solid #42d392;
-            border-radius: 12px;
-            width: min(95vw, 400px);
-            height: auto;
-            touch-action: none;
-        }
+canvas {
+    background: #193c31;
+    border: 3px solid #42d392;
+    border-radius: 12px;
+    width: min(95vw, 400px);
+    height: auto;
+    touch-action: none;
+}
 
-        button {
-            background: #2388ff;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 15px 25px;
-            font-size: 20px;
-            margin: 8px;
-            cursor: pointer;
-        }
+button {
+    background: #2388ff;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px 25px;
+    font-size: 20px;
+    margin: 8px;
+    cursor: pointer;
+}
 
-        button:active {
-            transform: scale(0.95);
-        }
-
-        #finish {
-            background: #20a66a;
-            width: min(95%, 400px);
-            font-weight: bold;
-        }
-    </style>
+#finish {
+    background: #20a66a;
+    width: min(95%, 400px);
+    font-weight: bold;
+}
+</style>
 </head>
 
 <body>
 
-    <h1>🪙 COIN HUNTER</h1>
+<h1>🪙 COIN HUNTER</h1>
 
-    <div id="score">Монеты: 0 | Баллы: 0</div>
+<div id="score">Монеты: 0 | Баллы: 0</div>
 
-    <canvas id="game" width="400" height="500"></canvas>
+<canvas id="game" width="400" height="500"></canvas>
 
-    <div>
-        <button onclick="move('up')">⬆️</button>
-    </div>
+<div>
+    <button onclick="move('up')">⬆️</button>
+</div>
 
-    <div>
-        <button onclick="move('left')">⬅️</button>
-        <button onclick="move('down')">⬇️</button>
-        <button onclick="move('right')">➡️</button>
-    </div>
+<div>
+    <button onclick="move('left')">⬅️</button>
+    <button onclick="move('down')">⬇️</button>
+    <button onclick="move('right')">➡️</button>
+</div>
 
-    <button id="finish" onclick="finishGame()">
-        🏁 ЗАВЕРШИТЬ ИГРУ
-    </
+<button id="finish" onclick="finishGame()">
+    🏁 ЗАВЕРШИТЬ ИГРУ
+</button>
+
+<script>
+const tg = window.Telegram.WebApp;
+
+tg.ready();
+tg.expand();
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = {
+    x: 190,
+    y: 240
+};
+
+let coin = {
+    x: 100,
+    y: 100
+};
+
+let score = 0;
+let gameFinished = false;
+let animation = 0;
+
+// Рисуем человечка
+function drawPlayer() {
+    ctx.save();
+
+    // Голова
+    ctx.fillStyle = "#FFD6A5";
+    ctx.beginPath();
+    ctx.arc(player.x + 10, player.y - 12, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Тело
+    ctx.fillStyle = "#2388FF";
+    ctx.fillRect(player.x, player.y, 20, 25);
+
+    // Руки
+    ctx.strokeStyle = "#FFD6A5";
+    ctx.lineWidth = 5;
+
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y + 5);
+    ctx.lineTo(player.x - 8, player.y + 17);
+
+    ctx.moveTo(player.x + 20, player.y + 5);
+    ctx.lineTo(player.x + 28, player.y + 17);
+
+    ctx.stroke();
+
+    // Ноги
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 5;
+
+    ctx.beginPath();
+    ctx.moveTo(player.x + 5, player.y + 25);
+    ctx.lineTo(player.x + 2, player.y + 37);
+
+    ctx.moveTo(player.x + 15, player.y + 25);
+    ctx.lineTo(player.x + 18, player.y + 37);
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+// Рисуем золотую монетку
+function drawCoin() {
+    ctx.save();
+
+    animation += 0.06;
+
+    let width = Math.abs(Math.cos(animation)) * 12 + 5;
+
+    ctx.fillStyle = "#FFD700";
+    ctx.beginPath();
+
+    ctx.ellipse(
+        coin.x,
+        coin.y,
+        width,
+        15,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.strokeStyle = "#FFF1A6";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+// Игровое поле
+function draw() {
+    ctx.clearRect(0, 0, 400, 500);
+
+    drawCoin();
+    drawPlayer();
+
+    document.getElementById("score").innerText =
+        "Монеты: " + score + " | Баллы: " + score;
+
+    if (!gameFinished) {
+        requestAnimationFrame(draw);
+    }
+}
+
+// Перемещение
+function move(direction) {
+    if (gameFinished) return;
+
+    if (direction === "up") player.y -= 25;
+    if (direction === "down") player.y += 25;
+    if (direction === "left") player.x -= 25;
+    if (direction === "right") player.x += 25;
+
+    player.x = Math.max(10, Math.min(365, player.x));
+    player.y = Math.max(30, Math.min(445, player.y));
+
+    // Проверка сбора монетки
+    if (
+        Math.abs(player.x + 10 - coin.x) < 28 &&
+        Math.abs(player.y + 10 - coin.y) < 30
+    ) {
+        score++;
+
+        coin.x = Math.floor(Math.random() * 340) + 30;
+        coin.y = Math.floor(Math.random() * 420) + 30;
+    }
+}
+
+// Управление клавиатурой
+document.addEventListener("keydown", function(e) {
+    if (e.key === "ArrowUp") move("up");
+    if (e.key === "ArrowDown") move("down");
+    if (e.key === "ArrowLeft") move("left");
+    if (e.key === "ArrowRight") move("right");
+});
+
+// Завершение игры
+function finishGame() {
+    if (gameFinished) return;
+
+    gameFinished = true;
+
+    const result = {
+        action: "finish_game",
+        score: score
+    };
+
+    if (tg && tg.initData) {
+        tg.sendData(JSON.stringify(result));
+    } else {
+        alert(
+            "Игра завершена!\n" +
+            "Монеты: " + score +
+            "\nБаллы: " + score +
+            "\nОткрой игру через Telegram."
+        );
+    }
+}
+
+draw();
+
+</script>
+
+</body>
+</html>
