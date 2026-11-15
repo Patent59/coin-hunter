@@ -228,33 +228,37 @@ document.addEventListener("keydown", function(event) {
 
 });
 
-// Завершение игры
-function finishGame() {
 
+function finishGame() {
     if (gameFinished) return;
 
-    gameFinished = true;
+    const tg = window.Telegram?.WebApp;
+
+    if (!tg) {
+        alert("Telegram WebApp не обнаружен!");
+        return;
+    }
+
+    if (!tg.initData) {
+        alert("Игра открыта не через кнопку Telegram!");
+        return;
+    }
 
     const result = {
         action: "finish_game",
-        score: score
+        score: Number(score)
     };
 
-    if (tg && tg.initData) {
+    alert("Отправляем боту: " + score + " баллов");
 
+    try {
         tg.sendData(JSON.stringify(result));
-
-    } else {
-
-        alert(
-            "Игра завершена!\n\n" +
-            "Монеты: " + score +
-            "\nБаллы: " + score
-        );
-
-        gameFinished = false;
+        gameFinished = true;
+    } catch (error) {
+        alert("Ошибка отправки: " + error.message);
     }
 }
+
 
 // Первоначальное отображение
 updateScreen();
