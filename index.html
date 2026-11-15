@@ -234,30 +234,24 @@ function finishGame() {
 
     const tg = window.Telegram?.WebApp;
 
-    if (!tg) {
-        alert("Telegram WebApp не обнаружен!");
-        return;
-    }
-
-    if (!tg.initData) {
-        alert("Игра открыта не через кнопку Telegram!");
+    if (!tg || !tg.initData) {
+        alert("Открой игру через кнопку Telegram!");
         return;
     }
 
     const result = {
         action: "finish_game",
-        score: Number(score)
+        score: Math.floor(Number(score))
     };
 
-    alert("Отправляем боту: " + score + " баллов");
-
     try {
-        tg.sendData(JSON.stringify(result));
         gameFinished = true;
+        tg.sendData(JSON.stringify(result));
     } catch (error) {
+        gameFinished = false;
         alert("Ошибка отправки: " + error.message);
     }
-}
+} 
 
 
 // Первоначальное отображение
